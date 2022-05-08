@@ -1,0 +1,2 @@
+This never got done, but should be easy enough to make by someone determined enough.
+Just use the API calls to create rules.

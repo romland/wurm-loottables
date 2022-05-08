@@ -1,0 +1,117 @@
+// 
+// Mostly everything should make sense once you have added the JAR to your project.
+// 
+// This is an example on how I have one of my other projects use Loot Tables.
+//
+// (log statements and comments were added to make it easier for you to test and debug)
+// 
+//               -- Friya
+// 
+
+// You want to implement BeforeDropListener, after that your IDE should give you some hints.
+public class CreatureLoot implements BeforeDropListener
+{
+	private static Logger logger = Logger.getLogger(CreatureLoot.class.getName());
+	private static CreatureLoot instance;
+	static String ancientAmuletRuleName = "[all NPCs] mod:vamps, Ancient Amulet";
+
+	CreatureLoot()
+	{
+	}
+	
+	public static CreatureLoot getInstance()
+	{
+		if(instance == null) {
+			instance = new CreatureLoot();
+		}
+
+		return instance; 
+	}
+
+	
+	@Override
+	public boolean onBeforeDrop(LootResult lootResult)
+	{
+		logger.log(Level.INFO, "We were notified about something dying!");
+		
+		logger.log(Level.INFO, "ancientAmuletRuleName triggered: " + lootResult.hasLootRule(ancientAmuletRuleName));
+		logger.log(Level.INFO, "Killers: " + Arrays.toString(lootResult.getKillers()));
+		logger.log(Level.INFO, "Rules: " + lootResult.getLootRules());
+		logger.log(Level.INFO, "Items: " + Arrays.toString(lootResult.getItems()));
+
+		// The lootResult contains everything you would need, including:
+		// - who killed the NPC
+		// - which rules were triggered (handy to create quests)
+		// - which items are about to drop
+		// - etc, etc.
+		
+		// Returning false will discard any items that would otherwise drop.
+		return true;
+	}
+
+
+	public static void onServerStarted() 
+	{
+		createLootRules();
+
+		// Set up a onBeforeDropListener so that we get notifications when something might drop.
+		LootSystem.getInstance().listen((BeforeDropListener)getInstance());
+	}
+
+	static void createLootRules() 
+	{
+		LootSystem ls = LootSystem.getInstance();
+		
+		if(ls.hasLootRule(ancientAmuletRuleName) == false) {
+			// This rule says: Every NPC has the chance to drop the contents from this loot-table.
+
+			logger.log(Level.INFO, "Adding loot rule: " + ancientAmuletRuleName);
+
+			LootRule lr = new LootRule(ancientAmuletRuleName);
+
+			// The item(s) in question is/are:
+			// We treat Wurm's item IDs as strings so that we can support multiple IDs per SQL statement (for those who don't go near code)
+			LootItem[] li = new LootItem[]{
+			
+				// NOTE: You probably do not have any ancient amulet on your server, so the "Amulet.getId()"
+				// 		 will fail. Replace it with a template ID of your own, or one from Wurm proper.
+
+				// We specify some attributes of the item, the rest are defaults.
+				new LootItem("" + Amulet.getId(), Item.MATERIAL_SERYLL, 2.0f, "Vampire Hunter D")
+			};
+
+			ls.addLootRule(lr, li);
+		}
+
+		// Just assign it a name so that you can easily identify it, can be anything.
+		String ruleName = "[all NPCs] Rare stuff";
+		
+		if(ls.hasLootRule(ruleName) == false) {
+			// Every NPC should have a small chance to drop these special items (these are 'safe', such as shoulders, etc)
+			logger.log(Level.INFO, "Adding loot rule: " + ruleName);
+
+			LootRule lr = new LootRule(ruleName);
+
+			// We treat Wurm's item IDs as strings so that we can support multiple IDs per SQL statement.
+			// This makes for less than optimal database design, but it is to make lives easier for those 
+			// who don't want to go near code and just perform changes using SQL (perhaps even SQL given
+			// to them by others). Sharing is caring!
+			LootItem[] li = new LootItem[] {
+				new LootItem(
+					"370,443,465,489,509,515,600,666,667,"
+				  + "668,700,738,781,834,844,867,967,972," 
+				  + "973,974,975,976,977,978,979,980,1014,"
+				  + "1015,1032,1049,1050,1051,1052,1053,1054,
+				  + "1055,1056,1057,1058,1059,"
+				  + "1060,1061,1062,1063,1064,1065,1066,1076,"
+				  + "1077,1078,1079,1080,1081,1082,1083,1084," 
+				  + "1085,1086,1087,1088,1089,"
+				  + "1090,1092,1093,1094,1095,1099",
+					(1.0/102.0)		// This (1.0%) is per item, so divide with number of items in the collection (I kept the division of 102 despite removing items from list -- which means the drop chance for any of these is less than 1% as it stands)
+				)
+			};
+
+			ls.addLootRule(lr, li);
+		}
+	}
+}
